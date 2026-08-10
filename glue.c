@@ -41,3 +41,13 @@ char *catgets(nl_catd catalog, int set_number, int message_number,
 #endif
 
 void *__dso_handle = (void *) &__dso_handle;
+
+#ifdef CONFIG_LIBCXX_RELEASE2118
+#include <stdlib.h>
+#include <uk/alloc.h>
+
+void *aligned_alloc(size_t align, size_t size)
+{
+	return uk_memalign(uk_alloc_get_default(), align, size);
+}
+#endif
