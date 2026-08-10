@@ -6,6 +6,28 @@ menuconfig LIBCXX
     default n
 
 if LIBCXX
+
+choice
+	prompt "Version"
+	default LIBCXX_RELEASE2118
+	help
+		Select the version of the upstream libcxx
+		sources that will be downloaded.
+		Please note that you should run `make properclean`
+		whenever you change the version.
+
+config LIBCXX_RELEASE1406
+	bool "Release 14.0.6"
+	help
+		An official release from the LLVM project.
+
+config LIBCXX_RELEASE2118
+	bool "Release 21.1.8"
+	help
+		An official release from the LLVM project.
+
+endchoice
+
 config CXX_THREADS
     bool "Enable CXX threads support"
     select LIBCXXABI_THREADS

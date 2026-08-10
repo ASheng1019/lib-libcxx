@@ -39,20 +39,32 @@
 ################################################################################
 $(eval $(call addlib_s,libcxx,$(CONFIG_LIBCXX)))
 
+ifeq ($(CONFIG_LIBCXX_RELEASE2118),y)
+LIBCXX_MIN_GCC=15
+LIBCXX_MIN_CLANG=19
+else
+LIBCXX_MIN_GCC=11
+LIBCXX_MIN_CLANG=10
+endif
+
 ifeq ($(CONFIG_LIBCXX),y)
 ifeq ($(call have_gcc),y)
-$(call error_if_gcc_version_lt,11,0)
+$(call error_if_gcc_version_lt,$(LIBCXX_MIN_GCC),0)
 else ifeq ($(call have_clang),y)
-$(call error_if_clang_version_lt,10,0)
+$(call error_if_clang_version_lt,$(LIBCXX_MIN_CLANG),0)
 endif
 endif
 
 ################################################################################
 # Sources
 ################################################################################
+ifeq ($(CONFIG_LIBCXX_RELEASE2118),y)
+LIBCXX_VERSION=21.1.8
+else
 LIBCXX_VERSION=14.0.6
+endif
 LIBCXX_URL=https://github.com/llvm/llvm-project/releases/download/llvmorg-$(LIBCXX_VERSION)/libcxx-$(LIBCXX_VERSION).src.tar.xz
-LIBCXX_PATCHDIR=$(LIBCXX_BASE)/patches
+LIBCXX_PATCHDIR=$(LIBCXX_BASE)/patches/$(LIBCXX_VERSION)
 $(eval $(call fetch,libcxx,$(LIBCXX_URL)))
 $(eval $(call patch,libcxx,$(LIBCXX_PATCHDIR),libcxx-$(LIBCXX_VERSION).src))
 
@@ -64,13 +76,17 @@ LIBCXX_SRC = $(LIBCXX_ORIGIN)/libcxx-$(LIBCXX_VERSION).src
 ################################################################################
 # Library includes
 ################################################################################
+CINCLUDES-$(CONFIG_LIBCXX) += -I$(LIBCXX_BASE)/include/$(LIBCXX_VERSION)
 CINCLUDES-$(CONFIG_LIBCXX) += -I$(LIBCXX_BASE)/include
 CINCLUDES-$(CONFIG_LIBCXX) += -I$(LIBCXX_SRC)/src
 CINCLUDES-$(CONFIG_LIBCXX) += -I$(LIBCXX_SRC)/include
 
+CXXINCLUDES-$(CONFIG_LIBCXX) += -I$(LIBCXX_BASE)/include/$(LIBCXX_VERSION)
 CXXINCLUDES-$(CONFIG_LIBCXX) += -I$(LIBCXX_BASE)/include
 CXXINCLUDES-$(CONFIG_LIBCXX) += -I$(LIBCXX_SRC)/src
 CXXINCLUDES-$(CONFIG_LIBCXX) += -I$(LIBCXX_SRC)/include
+
+CXXINCLUDES-$(CONFIG_LIBCXX_RELEASE2118) += -I$(LIBCXX_BASE)/include/21.1.8/libc
 
 # include/locale uses _GNU_SOURCE extensions from stdlib.h
 CXXFLAGS-$(CONFIG_LIBCXX) += -D_GNU_SOURCE
@@ -104,8 +120,11 @@ LIBCXX_SUPPRESS_FLAGS-$(call have_gcc) += -Wno-alloc-size-larger-than
 LIBCXX_SUPPRESS_FLAGS-$(call have_gcc) += -Wno-maybe-uninitialized
 LIBCXX_SUPPRESS_FLAGS-$(call have_gcc) += -Wno-unknown-pragmas
 
+LIBCXX_CXXSTD-$(CONFIG_LIBCXX_RELEASE1406) = -std=c++2a
+LIBCXX_CXXSTD-$(CONFIG_LIBCXX_RELEASE2118) = -std=c++2b
+
 LIBCXX_CFLAGS-y    += $(LIBCXX_CONFIG_FLAGS)
-LIBCXX_CXXFLAGS-y  += $(LIBCXX_CONFIG_FLAGS) -std=c++2a
+LIBCXX_CXXFLAGS-y  += $(LIBCXX_CONFIG_FLAGS) $(LIBCXX_CXXSTD-y)
 LIBCXX_CXXFLAGS-$(call have_gcc) += -Wno-literal-suffix
 LIBCXX_CXXFLAGS-$(call have_gcc) += -Wno-dangling-reference
 
@@ -118,28 +137,28 @@ LIBCXX_SRCS-y += $(LIBCXX_BASE)/glue.c
 ################################################################################
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/algorithm.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/any.cpp
-LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/atomic.cpp
-LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/barrier.cpp
+LIBCXX_SRCS-$(CONFIG_CXX_THREADS) += $(LIBCXX_SRC)/src/atomic.cpp
+LIBCXX_SRCS-$(CONFIG_CXX_THREADS) += $(LIBCXX_SRC)/src/barrier.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/bind.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/charconv.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/chrono.cpp
-LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/condition_variable.cpp
-LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/condition_variable_destructor.cpp
+LIBCXX_SRCS-$(CONFIG_CXX_THREADS) += $(LIBCXX_SRC)/src/condition_variable.cpp
+LIBCXX_SRCS-$(CONFIG_CXX_THREADS) += $(LIBCXX_SRC)/src/condition_variable_destructor.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/exception.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/filesystem/directory_iterator.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/filesystem/operations.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/functional.cpp
-LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/future.cpp
+LIBCXX_SRCS-$(CONFIG_CXX_THREADS) += $(LIBCXX_SRC)/src/future.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/hash.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/ios.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/ios.instantiations.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/iostream.cpp
-LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/legacy_pointer_safety.cpp
+LIBCXX_SRCS-$(CONFIG_LIBCXX_RELEASE1406) += $(LIBCXX_SRC)/src/legacy_pointer_safety.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/locale.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/memory.cpp
-LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/experimental/memory_resource.cpp
-LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/mutex.cpp
-LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/mutex_destructor.cpp
+LIBCXX_SRCS-$(CONFIG_LIBCXX_RELEASE1406) += $(LIBCXX_SRC)/src/experimental/memory_resource.cpp
+LIBCXX_SRCS-$(CONFIG_CXX_THREADS) += $(LIBCXX_SRC)/src/mutex.cpp
+LIBCXX_SRCS-$(CONFIG_CXX_THREADS) += $(LIBCXX_SRC)/src/mutex_destructor.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/new.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/optional.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/random.cpp
@@ -148,17 +167,32 @@ LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/regex.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/ryu/d2fixed.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/ryu/d2s.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/ryu/f2s.cpp
-LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/shared_mutex.cpp
+LIBCXX_SRCS-$(CONFIG_CXX_THREADS) += $(LIBCXX_SRC)/src/shared_mutex.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/stdexcept.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/string.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/strstream.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/system_error.cpp
-LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/thread.cpp
+LIBCXX_SRCS-$(CONFIG_CXX_THREADS) += $(LIBCXX_SRC)/src/thread.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/typeinfo.cpp
-LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/utility.cpp
+LIBCXX_SRCS-$(CONFIG_LIBCXX_RELEASE1406) += $(LIBCXX_SRC)/src/utility.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/valarray.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/variant.cpp
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/vector.cpp
+
+LIBCXX_SRCS-$(CONFIG_LIBCXX_RELEASE2118) += $(LIBCXX_SRC)/src/call_once.cpp
+LIBCXX_SRCS-$(CONFIG_LIBCXX_RELEASE2118) += $(LIBCXX_SRC)/src/error_category.cpp
+LIBCXX_SRCS-$(CONFIG_LIBCXX_RELEASE2118) += $(LIBCXX_SRC)/src/expected.cpp
+LIBCXX_SRCS-$(CONFIG_LIBCXX_RELEASE2118) += $(LIBCXX_SRC)/src/filesystem/directory_entry.cpp
+LIBCXX_SRCS-$(CONFIG_LIBCXX_RELEASE2118) += $(LIBCXX_SRC)/src/filesystem/filesystem_clock.cpp
+LIBCXX_SRCS-$(CONFIG_LIBCXX_RELEASE2118) += $(LIBCXX_SRC)/src/filesystem/filesystem_error.cpp
+LIBCXX_SRCS-$(CONFIG_LIBCXX_RELEASE2118) += $(LIBCXX_SRC)/src/filesystem/path.cpp
+LIBCXX_SRCS-$(CONFIG_LIBCXX_RELEASE2118) += $(LIBCXX_SRC)/src/fstream.cpp
+LIBCXX_SRCS-$(CONFIG_LIBCXX_RELEASE2118) += $(LIBCXX_SRC)/src/memory_resource.cpp
+LIBCXX_SRCS-$(CONFIG_LIBCXX_RELEASE2118) += $(LIBCXX_SRC)/src/new_handler.cpp
+LIBCXX_SRCS-$(CONFIG_LIBCXX_RELEASE2118) += $(LIBCXX_SRC)/src/new_helpers.cpp
+LIBCXX_SRCS-$(CONFIG_LIBCXX_RELEASE2118) += $(LIBCXX_SRC)/src/ostream.cpp
+LIBCXX_SRCS-$(CONFIG_LIBCXX_RELEASE2118) += $(LIBCXX_SRC)/src/print.cpp
+LIBCXX_SRCS-$(CONFIG_LIBCXX_RELEASE2118) += $(LIBCXX_SRC)/src/verbose_abort.cpp
 
 ifneq ($(CONFIG_LIBCOMPILER_RT),y)
 # Compiler RT comes with an own implementation
