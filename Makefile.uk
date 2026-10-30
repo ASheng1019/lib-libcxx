@@ -65,6 +65,11 @@ LIBCXX_VERSION=14.0.6
 endif
 LIBCXX_URL=https://github.com/llvm/llvm-project/releases/download/llvmorg-$(LIBCXX_VERSION)/libcxx-$(LIBCXX_VERSION).src.tar.xz
 LIBCXX_PATCHDIR=$(LIBCXX_BASE)/patches/$(LIBCXX_VERSION)
+ifeq ($(LIBCXX_VERSION),21.1.8)
+LIBCXX_ORIGIN_SHA256 := 6422a58a5c29b7f4fda224cfdc07842be8a208a61301bbba7a219116e3351809
+else
+LIBCXX_ORIGIN_SHA256 := f7a9865e25a6c5175549e31609605767bf3478e8cdf8428be2c911838e7b683d
+endif
 $(eval $(call fetch,libcxx,$(LIBCXX_URL)))
 $(eval $(call patch,libcxx,$(LIBCXX_PATCHDIR),libcxx-$(LIBCXX_VERSION).src))
 
@@ -198,3 +203,6 @@ ifneq ($(CONFIG_LIBCOMPILER_RT),y)
 # Compiler RT comes with an own implementation
 LIBCXX_SRCS-y += $(LIBCXX_SRC)/src/filesystem/int128_builtins.cpp
 endif
+
+# libc++ public wrappers must precede libc headers in C++ consumers.
+CXXINCLUDES-$(CONFIG_LIBCXX) := -I$(LIBCXX_SRC)/include -I$(LIBCXX_BASE)/include/$(LIBCXX_VERSION) $(CXXINCLUDES-y)

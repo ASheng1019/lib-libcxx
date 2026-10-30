@@ -1,0 +1,25 @@
+--- a/include/__config
++++ b/include/__config
+@@ -331,7 +331,9 @@
+ //      Use rand_s(), for use on Windows.
+ //      When this option is used, the token passed to `std::random_device`'s
+ //      constructor *must* be "/dev/urandom" -- anything else is an error.
+-#  if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||                     \
++#  if defined(__Unikraft__)
++#    define _LIBCPP_USING_GETENTROPY
++#  elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||                     \
+       defined(__DragonFly__)
+ #    define _LIBCPP_USING_ARC4_RANDOM
+ #  elif defined(__wasi__) || defined(__EMSCRIPTEN__)
+--- a/src/random.cpp
++++ b/src/random.cpp
+@@ -24,6 +24,9 @@
+ 
+ #if defined(_LIBCPP_USING_GETENTROPY)
+ #  include <sys/random.h>
++#  if defined(__Unikraft__)
++#    include <unistd.h> // musl declares getentropy here
++#  endif
+ #elif defined(_LIBCPP_USING_DEV_RANDOM)
+ #  include <fcntl.h>
+ #  include <unistd.h>

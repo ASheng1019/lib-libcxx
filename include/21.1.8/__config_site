@@ -46,9 +46,7 @@
 
 #define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 
-#if !defined(_LIBCPP_BUILDING_LIBRARY)
-#define _LIBCPP_BUILDING_LIBRARY
-#endif
+/* _LIBCPP_BUILDING_LIBRARY is private to runtime translation units. */
 
 #if defined(__arm__) || defined(__ARM_64__)
 #undef __FLT16_MANT_DIG__
